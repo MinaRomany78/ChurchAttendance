@@ -1,0 +1,61 @@
+@model List<GroupListItem>
+@{
+    ViewData["Title"] = "المجموعات";
+    var stages = (List<StageOption>)ViewBag.Stages;
+    int? stageId = (int?)ViewBag.StageId;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <form method="get" asp-action="Index" class="d-flex gap-2">
+        <select name="stageId" class="form-select" aria-label="المرحلة">
+            <option value="">كل المراحل</option>
+            @foreach (var s in stages)
+            {
+                <option value="@s.Id" selected="@(stageId == s.Id)">@s.Name</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-outline-primary">عرض</button>
+    </form>
+    <a asp-action="Create" asp-route-stageId="@stageId" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>إضافة مجموعة</a>
+</div>
+
+<section class="panel">
+    @if (Model.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-collection"></i>
+            <p class="text-muted">لا توجد مجموعات ضمن هذا العرض. المجموعات اختيارية، ويمكن إضافة الطلاب بدونها.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr><th>المجموعة</th><th>المرحلة</th><th>الوصف</th><th>الطلاب النشطون</th><th>الحالة</th><th>الإجراءات</th></tr>
+                </thead>
+                <tbody>
+                @foreach (var g in Model)
+                {
+                    <tr>
+                        <td class="fw-semibold">@g.Name</td>
+                        <td>@g.StageName</td>
+                        <td class="text-muted">@g.Description</td>
+                        <td>@g.StudentCount</td>
+                        <td><span class="badge-soft @(g.IsActive ? "badge-soft-success" : "badge-soft-danger")">@(g.IsActive ? "نشطة" : "موقوفة")</span></td>
+                        <td class="text-nowrap">
+                            <a asp-action="Edit" asp-route-id="@g.Id" class="btn btn-sm btn-outline-primary">تعديل</a>
+                            <form asp-action="Toggle" method="post" class="d-inline"
+                                  data-confirm="@(g.IsActive ? "هل تريد إيقاف هذه المجموعة؟" : "هل تريد تفعيل هذه المجموعة؟")">
+                                <input type="hidden" name="id" value="@g.Id" />
+                                <input type="hidden" name="active" value="@((!g.IsActive).ToString().ToLowerInvariant())" />
+                                <button type="submit" class="btn btn-sm @(g.IsActive ? "btn-outline-danger" : "btn-outline-success")">@(g.IsActive ? "إيقاف" : "تفعيل")</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

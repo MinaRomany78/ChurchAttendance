@@ -1,0 +1,183 @@
+@model DashboardViewModel
+@inject IAuthorizationService Auth
+@{
+    ViewData["Title"] = "لوحة التحكم";
+    var canManageStudents = (await Auth.AuthorizeAsync(User, AppPolicies.ManageStudents)).Succeeded;
+    var canRegister = (await Auth.AuthorizeAsync(User, AppPolicies.RegisterAttendance)).Succeeded;
+    var canReports = (await Auth.AuthorizeAsync(User, AppPolicies.ViewReports)).Succeeded;
+}
+
+<p class="text-muted mb-4">
+    <i class="bi bi-calendar3 me-1"></i>@Model.Today.ToString("dddd d MMMM yyyy")
+</p>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-4">
+        <div class="stat-card">
+            <span class="stat-icon tone-primary"><i class="bi bi-people-fill"></i></span>
+            <div><div class="stat-label">إجمالي الطلاب</div><div class="stat-value">@Model.TotalStudents.ToString("N0")</div></div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-4">
+        <div class="stat-card">
+            <span class="stat-icon tone-success"><i class="bi bi-check-circle-fill"></i></span>
+            <div><div class="stat-label">حاضر اليوم</div><div class="stat-value">@Model.PresentToday.ToString("N0")</div></div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-4">
+        <div class="stat-card">
+            <span class="stat-icon tone-danger"><i class="bi bi-x-circle-fill"></i></span>
+            <div><div class="stat-label">غائب اليوم</div><div class="stat-value">@Model.AbsentToday.ToString("N0")</div></div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-4">
+        <div class="stat-card">
+            <span class="stat-icon tone-gold"><i class="bi bi-star-fill"></i></span>
+            <div><div class="stat-label">إجمالي النقاط</div><div class="stat-value">@Model.TotalPoints.ToString("N0")</div></div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-4">
+        <div class="stat-card">
+            <span class="stat-icon tone-gold"><i class="bi bi-gift-fill"></i></span>
+            <div><div class="stat-label">عدد المكافآت</div><div class="stat-value">@Model.ActiveRewards.ToString("N0")</div></div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-4">
+        <div class="stat-card">
+            <span class="stat-icon tone-info"><i class="bi bi-graph-up-arrow"></i></span>
+            <div><div class="stat-label">نسبة الحضور اليوم</div><div class="stat-value">@Model.AttendanceRate.ToString("0.#")%</div></div>
+        </div>
+    </div>
+</div>
+
+
+
+<section class="panel mb-4">
+    <div class="panel-head d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h2 class="panel-title">نسبة الحضور حسب اليوم</h2>
+    </div>
+
+    <form method="get" asp-action="Index" class="row g-2 p-3 align-items-end">
+        <div class="col-6 col-lg-3">
+            <label class="form-label small text-muted mb-1" for="cFrom">من تاريخ</label>
+            <input id="cFrom" name="from" type="date" class="form-control" value="@Model.ChartFrom.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-6 col-lg-3">
+            <label class="form-label small text-muted mb-1" for="cTo">إلى تاريخ</label>
+            <input id="cTo" name="to" type="date" class="form-control" value="@Model.ChartTo.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-6 col-lg-2">
+            <label class="form-label small text-muted mb-1" for="cStage">المرحلة</label>
+            <select id="cStage" name="stageId" class="form-select">
+                <option value="">الكل</option>
+                @foreach (var s in Model.Stages)
+                {
+                    <option value="@s.Id" selected="@(Model.ChartStageId == s.Id)">@s.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-lg-2">
+            <label class="form-label small text-muted mb-1" for="cGroup">المجموعة</label>
+            <select id="cGroup" name="groupId" class="form-select" data-group-for="#cStage">
+                <option value="">الكل</option>
+                @foreach (var g in Model.Groups)
+                {
+                    <option value="@g.Id" data-stage="@g.StageId" selected="@(Model.ChartGroupId == g.Id)">@g.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-12 col-lg-2"><button type="submit" class="btn btn-primary w-100">عرض</button></div>
+    </form>
+
+    @if (Model.ChartError is not null)
+    {
+        <div class="alert alert-warning mx-3 py-2">@Model.ChartError</div>
+    }
+
+    @if (Model.ChartDays.All(d => d.Percent is null))
+    {
+        <div class="empty-state compact"><i class="bi bi-bar-chart"></i><p class="text-muted mb-0">لا توجد بيانات حضور في هذه الفترة.</p></div>
+    }
+    else
+    {
+        <div class="chart-box p-3">
+            <canvas id="attendanceChart"
+                    data-labels="@System.Text.Json.JsonSerializer.Serialize(Model.ChartDays.Select(d => d.Date.ToString("MM/dd")))"
+                    data-values="@System.Text.Json.JsonSerializer.Serialize(Model.ChartDays.Select(d => d.Percent))"></canvas>
+        </div>
+    }
+</section>
+
+@if (canManageStudents || canRegister || canReports)
+{
+    <section class="panel mb-4 quick-actions">
+        <div class="panel-head"><h2 class="panel-title">إجراءات سريعة</h2></div>
+        <div class="d-flex flex-wrap gap-2 p-3">
+            @if (canManageStudents)
+            {
+                <a asp-controller="Students" asp-action="Create" class="btn btn-outline-primary"><i class="bi bi-person-plus me-1"></i>إضافة طالب</a>
+            }
+            @if (canManageStudents)
+            {
+                <a asp-controller="Rewards" asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-gift me-1"></i>إدارة المكافآت</a>
+            }
+            @if (canReports)
+            {
+                <a asp-controller="Reports" asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-file-earmark-bar-graph me-1"></i>عرض التقارير</a>
+            }
+            @if (canRegister)
+            {
+                <a asp-controller="Attendance" asp-action="Create" class="btn btn-primary"><i class="bi bi-calendar-plus me-1"></i>فتح جلسة حضور</a>
+                <a asp-controller="Attendance" asp-action="Index" asp-route-status="open" class="btn btn-outline-primary"><i class="bi bi-upc-scan me-1"></i>تسجيل حضور (الجلسات المفتوحة)</a>
+            }
+        </div>
+    </section>
+}
+
+<section class="panel">
+    <div class="panel-head"><h2 class="panel-title">آخر تسجيلات الحضور</h2></div>
+
+    @if (Model.Latest.Count == 0)
+    {
+        <div class="empty-state compact">
+            <i class="bi bi-clipboard-check"></i>
+            <p class="text-muted mb-0">لا توجد تسجيلات حضور بعد. ستظهر هنا بمجرد تسجيل أول حضور.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>الطالب</th>
+                    <th>الكود</th>
+                    <th>التاريخ</th>
+                    <th>الوقت</th>
+                    <th>الحالة</th>
+                    <th>طريقة التسجيل</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var item in Model.Latest)
+                {
+                    <tr>
+                        <td class="fw-semibold">@item.StudentName</td>
+                        <td>@item.StudentCode</td>
+                        <td>@item.LocalTime.ToString("yyyy/MM/dd")</td>
+                        <td>@item.LocalTime.ToString("hh:mm tt")</td>
+                        <td><span class="badge-soft @ArabicText.StatusBadge(item.Status)">@ArabicText.Status(item.Status)</span></td>
+                        <td>@ArabicText.Method(item.Method)</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="~/js/dashboard-chart.js" asp-append-version="true"></script>
+    <script src="~/js/stage-group.js" asp-append-version="true"></script>
+}

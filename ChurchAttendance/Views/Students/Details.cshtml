@@ -1,0 +1,158 @@
+@model StudentDetailsViewModel
+@{
+    ViewData["Title"] = "ملف الطالب";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+    <div>
+        <h2 class="h4 fw-bold mb-1">@Model.FullName</h2>
+        <div class="text-muted">
+            كود الطالب: <span class="fw-semibold text-body">@Model.StudentCode</span>
+            <span class="badge-soft ms-2 @(Model.IsActive ? "badge-soft-success" : "badge-soft-danger")">@(Model.IsActive ? "نشط" : "موقوف")</span>
+        </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary">القائمة</a>
+        @if (Model.CanManage)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary"><i class="bi bi-pencil me-1"></i>تعديل</a>
+            <a asp-action="Badge" asp-route-id="@Model.Id" class="btn btn-primary"><i class="bi bi-printer me-1"></i>طباعة البطاقة</a>
+            @if (Model.IsActive)
+            {
+                <a asp-controller="Points" asp-action="Award" asp-route-studentId="@Model.Id" class="btn btn-outline-success"><i class="bi bi-plus-circle me-1"></i>إضافة نقاط</a>
+                <a asp-controller="Points" asp-action="Deduct" asp-route-studentId="@Model.Id" class="btn btn-outline-danger"><i class="bi bi-dash-circle me-1"></i>خصم نقاط</a>
+                <a asp-controller="Rewards" asp-action="Redeem" asp-route-studentId="@Model.Id" class="btn btn-outline-primary"><i class="bi bi-gift me-1"></i>استبدال مكافأة</a>
+            }
+            <form asp-action="SetActive" method="post" class="d-inline"
+                  data-confirm="@(Model.IsActive ? "إيقاف هذا الطالب؟ ستبقى كل سجلاته محفوظة." : "إعادة تفعيل هذا الطالب؟")">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <input type="hidden" name="active" value="@((!Model.IsActive).ToString().ToLowerInvariant())" />
+                <input type="hidden" name="returnTo" value="details" />
+                <button type="submit" class="btn @(Model.IsActive ? "btn-outline-danger" : "btn-outline-success")">@(Model.IsActive ? "إيقاف" : "تفعيل")</button>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <section class="panel mb-3">
+            <div class="panel-head"><h3 class="panel-title">البيانات الأساسية</h3></div>
+            <dl class="detail-list">
+                <dt>المرحلة</dt><dd>@Model.StageName</dd>
+                <dt>المجموعة</dt><dd>@(Model.GroupName ?? "—")</dd>
+                <dt>النوع</dt><dd>@ArabicText.GenderName(Model.Gender)</dd>
+                <dt>تاريخ الميلاد</dt><dd>@(Model.DateOfBirth?.ToString("yyyy/MM/dd") ?? "—")</dd>
+                <dt>هاتف الطالب</dt><dd dir="ltr" class="text-end">@(Model.Phone ?? "—")</dd>
+                <dt>ولي الأمر</dt><dd>@(Model.GuardianName ?? "—")</dd>
+                <dt>هاتف ولي الأمر</dt><dd dir="ltr" class="text-end">@(Model.GuardianPhone ?? "—")</dd>
+                <dt>العنوان</dt><dd>@(Model.Address ?? "—")</dd>
+                <dt>تاريخ التسجيل</dt><dd>@Model.CreatedAtLocal.ToString("yyyy/MM/dd")</dd>
+            </dl>
+        </section>
+
+        @if (Model.QrDataUri is not null)
+        {
+            <section class="panel text-center p-3">
+                <img src="@Model.QrDataUri" alt="رمز QR للطالب" class="qr-preview" />
+                <p class="text-muted small mt-2 mb-3">يستخدم هذا الرمز لتسجيل الحضور. لا يحتوي على بيانات شخصية.</p>
+                <form asp-action="RegenerateQr" method="post" data-confirm="سيتوقف الرمز الحالي عن العمل وستحتاج إلى طباعة بطاقة جديدة. هل تريد المتابعة؟">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-arrow-repeat me-1"></i>إنشاء رمز جديد</button>
+                </form>
+            </section>
+        }
+    </div>
+
+    <div class="col-lg-8">
+        <div class="row g-3 mb-3">
+            <div class="col-6 col-md-3"><div class="mini-stat"><span class="mini-value text-gold">@Model.Balance.ToString("N0")</span><span class="mini-label">رصيد النقاط</span></div></div>
+            <div class="col-6 col-md-3"><div class="mini-stat"><span class="mini-value">@Model.AttendanceRate.ToString("0.#")%</span><span class="mini-label">نسبة الحضور</span></div></div>
+            <div class="col-6 col-md-3"><div class="mini-stat"><span class="mini-value text-success">@((Model.PresentCount + Model.LateCount).ToString("N0"))</span><span class="mini-label">مرات الحضور</span></div></div>
+            <div class="col-6 col-md-3"><div class="mini-stat"><span class="mini-value text-danger">@Model.AbsentCount.ToString("N0")</span><span class="mini-label">مرات الغياب</span></div></div>
+        </div>
+
+        <section class="panel mb-3">
+            <div class="panel-head"><h3 class="panel-title">آخر سجلات الحضور</h3></div>
+            @if (Model.Attendance.Count == 0)
+            {
+                <div class="empty-state compact"><i class="bi bi-clipboard-check"></i><p class="text-muted mb-0">لا توجد سجلات حضور لهذا الطالب بعد.</p></div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th>التاريخ</th><th>الجلسة</th><th>الحالة</th><th>الوقت</th><th>طريقة التسجيل</th></tr></thead>
+                        <tbody>
+                        @foreach (var a in Model.Attendance)
+                        {
+                            <tr>
+                                <td>@a.Date.ToString("yyyy/MM/dd")</td>
+                                <td>@(a.SessionTitle ?? "—")</td>
+                                <td><span class="badge-soft @ArabicText.StatusBadge(a.Status)">@ArabicText.Status(a.Status)</span></td>
+                                <td>@(a.LocalCheckIn?.ToString("hh:mm tt") ?? "—")</td>
+                                <td>@ArabicText.Method(a.Method)</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section class="panel mb-3">
+            <div class="panel-head"><h3 class="panel-title">حركة النقاط</h3></div>
+            @if (Model.Transactions.Count == 0)
+            {
+                <div class="empty-state compact"><i class="bi bi-star"></i><p class="text-muted mb-0">لا توجد حركات نقاط بعد.</p></div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th>التاريخ</th><th>النوع</th><th>النقاط</th><th>السبب</th><th>بواسطة</th></tr></thead>
+                        <tbody>
+                        @foreach (var t in Model.Transactions)
+                        {
+                            <tr>
+                                <td>@t.LocalDate.ToString("yyyy/MM/dd")</td>
+                                <td>@ArabicText.TransactionTypeText(t.Type)</td>
+                                <td><span dir="ltr" class="fw-bold @(t.Points > 0 ? "text-success" : "text-danger")">@(t.Points > 0 ? "+" : "")@t.Points</span></td>
+                                <td>@t.Reason</td>
+                                <td class="text-muted">@t.CreatedBy</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+
+        <section class="panel">
+            <div class="panel-head"><h3 class="panel-title">المكافآت المستبدلة</h3></div>
+            @if (Model.Redemptions.Count == 0)
+            {
+                <div class="empty-state compact"><i class="bi bi-gift"></i><p class="text-muted mb-0">لم يستبدل هذا الطالب أي مكافأة بعد.</p></div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th>التاريخ</th><th>المكافأة</th><th>النقاط المستخدمة</th><th>الحالة</th></tr></thead>
+                        <tbody>
+                        @foreach (var r in Model.Redemptions)
+                        {
+                            <tr>
+                                <td>@r.LocalDate.ToString("yyyy/MM/dd")</td>
+                                <td class="fw-semibold">@r.RewardName</td>
+                                <td>@r.PointsUsed.ToString("N0")</td>
+                                <td><span class="badge-soft @ArabicText.RedemptionBadge(r.Status)">@ArabicText.RedemptionStatusText(r.Status)</span></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
+</div>

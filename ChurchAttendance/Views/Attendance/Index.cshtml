@@ -1,0 +1,117 @@
+@model SessionIndexViewModel
+@{
+    ViewData["Title"] = "جلسات الحضور";
+    var q = Model.Query;
+    var r = Model.Result;
+
+    string PageUrl(int p) => Url.Action("Index", new
+    {
+        From = q.From?.ToString("yyyy-MM-dd"), To = q.To?.ToString("yyyy-MM-dd"),
+        stageId = q.StageId, status = q.Status, page = p
+    })!;
+
+    var firstPage = Math.Max(1, r.Page - 2);
+    var lastPage = Math.Min(r.TotalPages, r.Page + 2);
+}
+
+<section class="panel mb-3">
+    <form method="get" asp-action="Index" class="row g-2 p-3 align-items-end">
+        <div class="col-6 col-lg-3">
+            <label class="form-label small text-muted mb-1" for="from">من تاريخ</label>
+            <input id="from" name="from" type="date" class="form-control" value="@(q.From?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-6 col-lg-3">
+            <label class="form-label small text-muted mb-1" for="to">إلى تاريخ</label>
+            <input id="to" name="to" type="date" class="form-control" value="@(q.To?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-6 col-lg-2">
+            <label class="form-label small text-muted mb-1" for="stageId">المرحلة</label>
+            <select id="stageId" name="stageId" class="form-select">
+                <option value="">الكل</option>
+                @foreach (var s in Model.Stages)
+                {
+                    <option value="@s.Id" selected="@(q.StageId == s.Id)">@s.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-lg-2">
+            <label class="form-label small text-muted mb-1" for="status">الحالة</label>
+            <select id="status" name="status" class="form-select">
+                <option value="all" selected="@(q.Status == "all")">الكل</option>
+                <option value="open" selected="@(q.Status == "open")">مفتوحة</option>
+                <option value="closed" selected="@(q.Status == "closed")">مغلقة</option>
+            </select>
+        </div>
+        <div class="col-12 col-lg-2 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-search me-1"></i>عرض</button>
+            <a asp-action="Index" class="btn btn-outline-secondary" title="مسح الفلاتر" aria-label="مسح الفلاتر"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</section>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <span class="text-muted">عدد الجلسات: @r.TotalCount.ToString("N0")</span>
+    @if (Model.CanCreate)
+    {
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>فتح جلسة حضور</a>
+    }
+</div>
+
+<section class="panel">
+    @if (r.Items.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-calendar-check"></i>
+            <p class="text-muted">لا توجد جلسات حضور مطابقة.</p>
+            @if (Model.CanCreate)
+            {
+                <a asp-action="Create" class="btn btn-primary">فتح جلسة حضور</a>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr><th>التاريخ</th><th>الوقت</th><th>الجلسة</th><th>النطاق</th><th>حاضر</th><th>غائب</th><th>الحالة</th><th></th></tr>
+                </thead>
+                <tbody>
+                @foreach (var s in r.Items)
+                {
+                    <tr>
+                        <td>@s.Date.ToString("yyyy/MM/dd")</td>
+                        <td>@s.StartTime.ToString("hh:mm tt")</td>
+                        <td>
+                            <div class="fw-semibold">@(s.Title ?? ArabicText.SessionTypeText(s.Type))</div>
+                            @if (s.Title is not null)
+                            {
+                                <div class="small text-muted">@ArabicText.SessionTypeText(s.Type)</div>
+                            }
+                        </td>
+                        <td>@(s.StageName ?? "كل المراحل")@(s.GroupName is null ? "" : " / " + s.GroupName)</td>
+                        <td class="text-success fw-bold">@s.PresentCount</td>
+                        <td class="text-danger fw-bold">@s.AbsentCount</td>
+                        <td><span class="badge-soft @(s.IsClosed ? "badge-soft-info" : "badge-soft-success")">@(s.IsClosed ? "مغلقة" : "مفتوحة")</span></td>
+                        <td><a asp-action="Session" asp-route-id="@s.Id" class="btn btn-sm btn-outline-primary">@(s.IsClosed ? "عرض" : "فتح")</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+
+        @if (r.TotalPages > 1)
+        {
+            <nav class="p-3 border-top" aria-label="التنقل بين الصفحات">
+                <ul class="pagination justify-content-center mb-0">
+                    <li class="page-item @(r.Page == 1 ? "disabled" : "")"><a class="page-link" href="@PageUrl(r.Page - 1)">السابق</a></li>
+                    @for (var p = firstPage; p <= lastPage; p++)
+                    {
+                        <li class="page-item @(p == r.Page ? "active" : "")"><a class="page-link" href="@PageUrl(p)">@p</a></li>
+                    }
+                    <li class="page-item @(r.Page == r.TotalPages ? "disabled" : "")"><a class="page-link" href="@PageUrl(r.Page + 1)">التالي</a></li>
+                </ul>
+            </nav>
+        }
+    }
+</section>

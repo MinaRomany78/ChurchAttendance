@@ -1,0 +1,46 @@
+@model RoleMatrixViewModel
+@{
+    ViewData["Title"] = "الأدوار والصلاحيات";
+}
+
+<p class="text-muted mb-3">
+    الأدوار الأربعة ثابتة ومحمية على مستوى الخادم. لتغيير دور مستخدم افتح صفحة
+    <a asp-controller="Users" asp-action="Index">المستخدمون</a>.
+</p>
+
+<section class="panel">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0 roles-table">
+            <thead>
+            <tr>
+                <th>الصلاحية</th>
+                @foreach (var r in Model.Roles)
+                {
+                    <th class="text-center">@r.DisplayName<div class="small fw-normal">(@r.UserCount مستخدم)</div></th>
+                }
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var p in Model.Permissions)
+            {
+                <tr>
+                    <td>@p.Label</td>
+                    @foreach (var r in Model.Roles)
+                    {
+                        <td class="text-center">
+                            @if (p.Roles.Contains(r.Role))
+                            {
+                                <i class="bi bi-check-circle-fill text-success" aria-label="مسموح"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-dash text-muted" aria-label="غير مسموح"></i>
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>

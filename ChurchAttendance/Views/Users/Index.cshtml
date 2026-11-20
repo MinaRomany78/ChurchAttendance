@@ -1,0 +1,43 @@
+@model List<UserListItem>
+@{
+    ViewData["Title"] = "المستخدمون";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <p class="text-muted mb-0">حسابات الدخول للنظام وأدوارها.</p>
+    <a asp-action="Create" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>إضافة مستخدم</a>
+</div>
+
+<section class="panel">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead><tr><th>الاسم</th><th>البريد الإلكتروني</th><th>الدور</th><th>الحالة</th><th>الإجراءات</th></tr></thead>
+            <tbody>
+            @foreach (var u in Model)
+            {
+                <tr>
+                    <td class="fw-semibold">@u.FullName @if (u.IsCurrentUser) { <span class="badge-soft badge-soft-info ms-1">أنت</span> }</td>
+                    <td dir="ltr" class="text-end">@u.Email</td>
+                    <td>@u.RoleName</td>
+                    <td>
+                        <span class="badge-soft @(u.IsActive ? "badge-soft-success" : "badge-soft-danger")">@(u.IsActive ? "نشط" : "موقوف")</span>
+                        @if (u.IsLockedOut) { <span class="badge-soft badge-soft-gold ms-1">مقفل مؤقتًا</span> }
+                    </td>
+                    <td class="text-nowrap">
+                        <a asp-action="Edit" asp-route-id="@u.Id" class="btn btn-sm btn-outline-primary">تعديل</a>
+                        <a asp-action="ResetPassword" asp-route-id="@u.Id" class="btn btn-sm btn-outline-secondary">كلمة المرور</a>
+                        @if (!u.IsCurrentUser)
+                        {
+                            <form asp-action="Toggle" method="post" class="d-inline" data-confirm="@(u.IsActive ? "إيقاف هذا الحساب؟ لن يتمكن من الدخول." : "تفعيل هذا الحساب؟")">
+                                <input type="hidden" name="id" value="@u.Id" />
+                                <input type="hidden" name="active" value="@((!u.IsActive).ToString().ToLowerInvariant())" />
+                                <button type="submit" class="btn btn-sm @(u.IsActive ? "btn-outline-danger" : "btn-outline-success")">@(u.IsActive ? "إيقاف" : "تفعيل")</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>

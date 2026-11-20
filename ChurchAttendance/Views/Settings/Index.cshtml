@@ -1,0 +1,82 @@
+@model SettingsViewModel
+@{
+    ViewData["Title"] = "الإعدادات";
+}
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <section class="panel form-panel">
+            <h2 class="h5 fw-bold mb-3">إعدادات عامة</h2>
+
+            <form asp-action="Save" method="post">
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label asp-for="ChurchName" class="form-label"></label>
+                        <input asp-for="ChurchName" class="form-control" />
+                        <span asp-validation-for="ChurchName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="col-12"><hr class="my-1" /><div class="fw-semibold">الحضور</div></div>
+
+                    <div class="col-md-6">
+                        <label asp-for="LateAfterMinutes" class="form-label"></label>
+                        <input asp-for="LateAfterMinutes" type="number" min="0" max="240" class="form-control" />
+                        <span asp-validation-for="LateAfterMinutes" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input asp-for="AllowExcusedAbsence" class="form-check-input" />
+                            <label asp-for="AllowExcusedAbsence" class="form-check-label"></label>
+                        </div>
+                    </div>
+
+                    <div class="col-12"><hr class="my-1" /><div class="fw-semibold">النقاط</div></div>
+
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input asp-for="AllowNegativePoints" class="form-check-input" />
+                            <label asp-for="AllowNegativePoints" class="form-check-label"></label>
+                        </div>
+                        <div class="form-text">عند إيقافه (الأفضل) يرفض النظام أي خصم يجعل رصيد الطالب أقل من صفر.</div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary px-4 mt-4">حفظ الإعدادات</button>
+            </form>
+        </section>
+    </div>
+
+    <div class="col-lg-5">
+        <section class="panel form-panel">
+            <h2 class="h5 fw-bold mb-3">شعار الكنيسة</h2>
+
+            <div class="mb-3">
+                @if (!string.IsNullOrWhiteSpace(Model.LogoPath))
+                {
+                    <img src="@Model.LogoPath" alt="شعار الكنيسة" class="logo-preview" />
+                }
+                else
+                {
+                    <div class="logo-preview logo-empty">✝</div>
+                }
+            </div>
+
+            <form asp-action="UploadLogo" method="post" enctype="multipart/form-data">
+                <label class="form-label" for="logo">اختر صورة (PNG أو JPG أو WEBP، حتى 1 ميجابايت)</label>
+                <input id="logo" name="logo" type="file" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" class="form-control" required />
+                <button type="submit" class="btn btn-primary mt-3">رفع الشعار</button>
+            </form>
+
+            @if (!string.IsNullOrWhiteSpace(Model.LogoPath))
+            {
+                <form asp-action="RemoveLogo" method="post" class="mt-2" data-confirm="حذف الشعار الحالي؟">
+                    <button type="submit" class="btn btn-outline-danger btn-sm">حذف الشعار</button>
+                </form>
+            }
+        </section>
+    </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

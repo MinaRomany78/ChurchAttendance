@@ -1,0 +1,90 @@
+@model RewardIndexViewModel
+@{
+    ViewData["Title"] = "المكافآت";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <p class="text-muted mb-0">كتالوج المكافآت والخصومات المتاحة للطلاب مقابل النقاط.</p>
+    <div class="d-flex gap-2">
+        @if (Model.CanRedeem)
+        {
+            <a asp-action="Redeem" class="btn btn-primary"><i class="bi bi-gift me-1"></i>استبدال مكافأة</a>
+        }
+        @if (Model.CanManage)
+        {
+            <a asp-action="Create" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>إضافة مكافأة</a>
+        }
+    </div>
+</div>
+
+@if (Model.Rewards.Count == 0)
+{
+    <section class="panel">
+        <div class="empty-state">
+            <i class="bi bi-gift"></i>
+            <p class="text-muted">لا توجد مكافآت بعد.</p>
+            @if (Model.CanManage)
+            {
+                <a asp-action="Create" class="btn btn-primary">إضافة مكافأة</a>
+            }
+        </div>
+    </section>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var r in Model.Rewards)
+        {
+            var soldOut = r.StockQuantity is <= 0;
+            <div class="col-12 col-md-6 col-xl-4">
+                <div class="reward-card @(r.IsActive && !soldOut ? "" : "is-off")">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <h3 class="reward-name">@r.Name</h3>
+                        <span class="points-chip"><i class="bi bi-star-fill"></i> @r.RequiredPoints.ToString("N0")</span>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(r.Description))
+                    {
+                        <p class="text-muted small mb-2">@r.Description</p>
+                    }
+
+                    <div class="d-flex flex-wrap gap-2 small mb-3">
+                        @if (!r.IsActive)
+                        {
+                            <span class="badge-soft badge-soft-danger">موقوفة</span>
+                        }
+                        else if (soldOut)
+                        {
+                            <span class="badge-soft badge-soft-danger">نفدت الكمية</span>
+                        }
+                        else if (r.StockQuantity is int left)
+                        {
+                            <span class="badge-soft badge-soft-info">المتبقي: @left</span>
+                        }
+                        else
+                        {
+                            <span class="badge-soft badge-soft-info">كمية غير محدودة</span>
+                        }
+                        <span class="badge-soft badge-soft-gold">تم استبدالها @r.RedemptionCount مرة</span>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 mt-auto">
+                        @if (Model.CanRedeem && r.IsActive && !soldOut)
+                        {
+                            <a asp-action="Redeem" asp-route-rewardId="@r.Id" class="btn btn-sm btn-primary">استبدال</a>
+                        }
+                        @if (Model.CanManage)
+                        {
+                            <a asp-action="Edit" asp-route-id="@r.Id" class="btn btn-sm btn-outline-primary">تعديل</a>
+                            <form asp-action="Toggle" method="post" class="d-inline" data-confirm="@(r.IsActive ? "إيقاف هذه المكافأة؟" : "تفعيل هذه المكافأة؟")">
+                                <input type="hidden" name="id" value="@r.Id" />
+                                <input type="hidden" name="active" value="@((!r.IsActive).ToString().ToLowerInvariant())" />
+                                <button type="submit" class="btn btn-sm @(r.IsActive ? "btn-outline-danger" : "btn-outline-success")">@(r.IsActive ? "إيقاف" : "تفعيل")</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

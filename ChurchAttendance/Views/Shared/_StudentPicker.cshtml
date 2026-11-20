@@ -1,0 +1,8 @@
+@model StudentPickerModel
+<div class="student-picker" data-student-picker data-lookup-url="@Url.Action("Lookup", "Students")">
+    <input type="hidden" name="@Model.FieldName" value="@Model.StudentId" data-picker-id />
+    <input type="text" class="form-control form-control-lg" data-picker-text autocomplete="off"
+           placeholder="ابحث بالاسم أو كود الطالب" value="@Model.Label" aria-label="الطالب" />
+    <div class="list-group picker-results" data-picker-results></div>
+    <div class="small mt-2">الرصيد الحالي: <strong class="text-gold" data-picker-balance>@(Model.Balance?.ToString("N0") ?? "—")</strong> نقطة</div>
+</div>

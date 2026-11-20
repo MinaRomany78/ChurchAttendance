@@ -1,0 +1,73 @@
+@model SessionFormViewModel
+@{
+    ViewData["Title"] = "فتح جلسة حضور";
+}
+
+<section class="panel form-panel">
+    <form asp-action="Create" method="post">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label asp-for="Title" class="form-label"></label>
+                <input asp-for="Title" class="form-control" placeholder="مثال: اجتماع الجمعة" />
+                <span asp-validation-for="Title" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="SessionType" class="form-label"></label>
+                <select asp-for="SessionType" class="form-select">
+                    @foreach (var t in Enum.GetValues<SessionType>())
+                    {
+                        <option value="@((int)t)" selected="@(Model.SessionType == t)">@ArabicText.SessionTypeText(t)</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="SessionDate" class="form-label"></label>
+                <input asp-for="SessionDate" type="date" class="form-control" />
+                <span asp-validation-for="SessionDate" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="StartTime" class="form-label"></label>
+                <input asp-for="StartTime" type="time" class="form-control" />
+                <span asp-validation-for="StartTime" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="StageId" class="form-label"></label>
+                <select asp-for="StageId" class="form-select">
+                    <option value="">كل المراحل</option>
+                    @foreach (var s in Model.Stages)
+                    {
+                        <option value="@s.Id">@s.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="GroupId" class="form-label"></label>
+                <select asp-for="GroupId" class="form-select" data-group-for="#StageId">
+                    <option value="">كل المجموعات</option>
+                    @foreach (var g in Model.Groups)
+                    {
+                        <option value="@g.Id" data-stage="@g.StageId">@g.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <p class="text-muted small mt-3 mb-0">
+            عند إغلاق الجلسة يُسجَّل تلقائيًا غياب كل طالب نشط ضمن النطاق المحدد لم يُسجَّل حضوره.
+        </p>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary px-4">فتح الجلسة</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">إلغاء</a>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/stage-group.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,52 @@
+@model RedeemFormViewModel
+@{
+    ViewData["Title"] = "استبدال مكافأة";
+}
+
+<section class="panel form-panel">
+    <form asp-action="Preview" method="post">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="form-label">الطالب</label>
+                <partial name="_StudentPicker" model="new StudentPickerModel { StudentId = Model.StudentId, Label = Model.StudentLabel, Balance = Model.StudentBalance }" />
+                <span asp-validation-for="StudentId" class="text-danger small"></span>
+            </div>
+
+            <div class="col-12">
+                <label asp-for="RewardId" class="form-label"></label>
+                <select asp-for="RewardId" class="form-select form-select-lg">
+                    <option value="">اختر المكافأة</option>
+                    @foreach (var r in Model.Rewards)
+                    {
+                        <option value="@r.Id">@r.Name — @r.RequiredPoints.ToString("N0") نقطة@(r.StockQuantity is int s ? $" (المتبقي {s})" : "")</option>
+                    }
+                </select>
+                <span asp-validation-for="RewardId" class="text-danger small"></span>
+                @if (Model.Rewards.Count == 0)
+                {
+                    <div class="form-text text-danger">لا توجد مكافآت متاحة حاليًا.</div>
+                }
+            </div>
+
+            <div class="col-12">
+                <label asp-for="Notes" class="form-label"></label>
+                <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+                <span asp-validation-for="Notes" class="text-danger small"></span>
+            </div>
+        </div>
+
+        <p class="text-muted small mt-3 mb-0">ستظهر شاشة تأكيد قبل خصم أي نقاط.</p>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary px-4">متابعة</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">إلغاء</a>
+        </div>
+    </form>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/student-picker.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,159 @@
+@model StudentIndexViewModel
+@{
+    ViewData["Title"] = "الطلاب";
+    var q = Model.Query;
+    var r = Model.Result;
+
+    string SortUrl(string key) => Url.Action("Index", new
+    {
+        search = q.Search, stageId = q.StageId, groupId = q.GroupId, status = q.Status,
+        sort = key, desc = (q.Sort == key && !q.Desc), page = 1
+    })!;
+
+    string PageUrl(int p) => Url.Action("Index", new
+    {
+        search = q.Search, stageId = q.StageId, groupId = q.GroupId, status = q.Status,
+        sort = q.Sort, desc = q.Desc, page = p
+    })!;
+
+    string SortIcon(string key) => q.Sort == key
+        ? (q.Desc ? "bi-caret-down-fill" : "bi-caret-up-fill")
+        : "bi-arrow-down-up text-muted opacity-50";
+
+    var firstPage = Math.Max(1, r.Page - 2);
+    var lastPage = Math.Min(r.TotalPages, r.Page + 2);
+}
+
+<section class="panel mb-3">
+    <form method="get" asp-action="Index" class="row g-2 p-3 align-items-end">
+        <input type="hidden" name="sort" value="@q.Sort" />
+        <input type="hidden" name="desc" value="@q.Desc.ToString().ToLowerInvariant()" />
+
+        <div class="col-12 col-lg-4">
+            <label class="form-label small text-muted mb-1" for="search">بحث بالاسم أو الكود أو رمز QR</label>
+            <input id="search" name="search" value="@q.Search" class="form-control" placeholder="اكتب للبحث..." />
+        </div>
+        <div class="col-6 col-lg-2">
+            <label class="form-label small text-muted mb-1" for="filterStage">المرحلة</label>
+            <select id="filterStage" name="stageId" class="form-select">
+                <option value="">الكل</option>
+                @foreach (var s in Model.Stages)
+                {
+                    <option value="@s.Id" selected="@(q.StageId == s.Id)">@s.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-lg-2">
+            <label class="form-label small text-muted mb-1" for="filterGroup">المجموعة</label>
+            <select id="filterGroup" name="groupId" class="form-select" data-group-for="#filterStage">
+                <option value="">الكل</option>
+                @foreach (var g in Model.Groups)
+                {
+                    <option value="@g.Id" data-stage="@g.StageId" selected="@(q.GroupId == g.Id)">@g.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-6 col-lg-2">
+            <label class="form-label small text-muted mb-1" for="filterStatus">الحالة</label>
+            <select id="filterStatus" name="status" class="form-select">
+                <option value="active" selected="@(q.Status == "active")">نشط</option>
+                <option value="inactive" selected="@(q.Status == "inactive")">موقوف</option>
+                <option value="all" selected="@(q.Status == "all")">الكل</option>
+            </select>
+        </div>
+        <div class="col-6 col-lg-2 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-search me-1"></i>بحث</button>
+            <a asp-action="Index" class="btn btn-outline-secondary" title="مسح الفلاتر" aria-label="مسح الفلاتر"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</section>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <span class="text-muted">النتائج: @r.TotalCount.ToString("N0")</span>
+    @if (Model.CanManage)
+    {
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>إضافة طالب</a>
+    }
+</div>
+
+<section class="panel">
+    @if (r.Items.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-people"></i>
+            <p class="text-muted">لا يوجد طلاب مطابقون للبحث.</p>
+            @if (Model.CanManage)
+            {
+                <a asp-action="Create" class="btn btn-primary">إضافة طالب</a>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>الرقم</th>
+                    <th><a class="sort-link" href="@SortUrl("name")">الاسم <i class="bi @SortIcon("name")"></i></a></th>
+                    <th><a class="sort-link" href="@SortUrl("code")">كود الطالب <i class="bi @SortIcon("code")"></i></a></th>
+                    <th><a class="sort-link" href="@SortUrl("stage")">المرحلة <i class="bi @SortIcon("stage")"></i></a></th>
+                    <th>المجموعة</th>
+                    <th><a class="sort-link" href="@SortUrl("points")">إجمالي النقاط <i class="bi @SortIcon("points")"></i></a></th>
+                    <th><a class="sort-link" href="@SortUrl("status")">الحالة <i class="bi @SortIcon("status")"></i></a></th>
+                    <th>الإجراءات</th>
+                </tr>
+                </thead>
+                <tbody>
+                @for (var i = 0; i < r.Items.Count; i++)
+                {
+                    var s = r.Items[i];
+                    <tr>
+                        <td class="text-muted">@((r.Page - 1) * r.PageSize + i + 1)</td>
+                        <td class="fw-semibold"><a asp-action="Details" asp-route-id="@s.Id" class="text-decoration-none">@s.FullName</a></td>
+                        <td>@s.StudentCode</td>
+                        <td>@s.StageName</td>
+                        <td>@(s.GroupName ?? "—")</td>
+                        <td><span class="points-chip"><i class="bi bi-star-fill"></i> @s.Points.ToString("N0")</span></td>
+                        <td><span class="badge-soft @(s.IsActive ? "badge-soft-success" : "badge-soft-danger")">@(s.IsActive ? "نشط" : "موقوف")</span></td>
+                        <td class="text-nowrap">
+                            <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-sm btn-outline-secondary" title="عرض" aria-label="عرض"><i class="bi bi-eye"></i></a>
+                            @if (Model.CanManage)
+                            {
+                                <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-outline-primary" title="تعديل" aria-label="تعديل"><i class="bi bi-pencil"></i></a>
+                                <form asp-action="SetActive" method="post" class="d-inline"
+                                      data-confirm="@(s.IsActive ? "إيقاف هذا الطالب؟ ستبقى كل سجلاته محفوظة." : "إعادة تفعيل هذا الطالب؟")">
+                                    <input type="hidden" name="id" value="@s.Id" />
+                                    <input type="hidden" name="active" value="@((!s.IsActive).ToString().ToLowerInvariant())" />
+                                    <button type="submit" class="btn btn-sm @(s.IsActive ? "btn-outline-danger" : "btn-outline-success")"
+                                            title="@(s.IsActive ? "إيقاف" : "تفعيل")" aria-label="@(s.IsActive ? "إيقاف" : "تفعيل")">
+                                        <i class="bi @(s.IsActive ? "bi-person-x" : "bi-person-check")"></i>
+                                    </button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+
+        @if (r.TotalPages > 1)
+        {
+            <nav class="p-3 border-top" aria-label="التنقل بين الصفحات">
+                <ul class="pagination justify-content-center mb-0">
+                    <li class="page-item @(r.Page == 1 ? "disabled" : "")"><a class="page-link" href="@PageUrl(r.Page - 1)">السابق</a></li>
+                    @for (var p = firstPage; p <= lastPage; p++)
+                    {
+                        <li class="page-item @(p == r.Page ? "active" : "")"><a class="page-link" href="@PageUrl(p)">@p</a></li>
+                    }
+                    <li class="page-item @(r.Page == r.TotalPages ? "disabled" : "")"><a class="page-link" href="@PageUrl(r.Page + 1)">التالي</a></li>
+                </ul>
+            </nav>
+        }
+    }
+</section>
+
+@section Scripts {
+    <script src="~/js/stage-group.js" asp-append-version="true"></script>
+}

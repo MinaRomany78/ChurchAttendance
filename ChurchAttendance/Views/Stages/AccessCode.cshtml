@@ -1,0 +1,29 @@
+@model StageAccessCodeViewModel
+@{
+    ViewData["Title"] = "رمز دخول المرحلة";
+}
+
+<section class="panel form-panel">
+    <h2 class="h5 fw-bold mb-1">@Model.StageName</h2>
+    <p class="text-muted">
+        @(Model.RequiresCode
+            ? "هذه المرحلة تتطلب رمز دخول حاليًا. أدخل رمزًا جديدًا لاستبداله، أو اتركه فارغًا لإلغاء الاشتراط."
+            : "هذه المرحلة لا تتطلب رمز دخول حاليًا. أدخل رمزًا لتفعيل الاشتراط.")
+    </p>
+
+    <form asp-action="SetAccessCode" method="post">
+        <input type="hidden" name="id" value="@Model.Id" />
+
+        <div class="mb-3">
+            <label class="form-label" for="code">الرمز الجديد (4 أحرف على الأقل، اتركه فارغًا للإزالة)</label>
+            <input id="code" name="code" class="form-control" autocomplete="off" inputmode="numeric" />
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary px-4">حفظ</button>
+            <a asp-action="Index" class="btn btn-outline-secondary">إلغاء</a>
+        </div>
+    </form>
+
+    <p class="text-muted small mt-3 mb-0">الرمز يُحفظ مشفّرًا ولا يمكن استرجاعه أو عرضه لاحقًا، فقط استبداله.</p>
+</section>

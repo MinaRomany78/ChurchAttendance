@@ -1,0 +1,21 @@
+@model IReadOnlyList<ReportDefinition>
+@{
+    ViewData["Title"] = "التقارير";
+}
+
+<p class="text-muted mb-4">اختر تقريرًا، ثم حدّد الفترة والفلاتر. يمكن طباعة كل تقرير أو حفظه PDF أو تصديره إلى Excel.</p>
+
+<div class="row g-3">
+    @foreach (var d in Model)
+    {
+        <div class="col-12 col-md-6 col-xl-4">
+            <a asp-action="Show" asp-route-id="@d.Key" class="report-card">
+                <span class="stat-icon tone-primary"><i class="bi @d.Icon"></i></span>
+                <div>
+                    <div class="report-title">@d.Title</div>
+                    <div class="text-muted small">@d.Description</div>
+                </div>
+            </a>
+        </div>
+    }
+</div>

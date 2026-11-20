@@ -1,0 +1,43 @@
+@model BadgeViewModel
+@{
+    ViewData["Title"] = "بطاقة الطالب";
+    Layout = "_PrintLayout";
+    var studentId = ViewContext.RouteData.Values["id"];
+}
+
+<style media="print">
+    @@page { size: 86mm 54mm; margin: 0; }
+</style>
+
+<div class="badge-toolbar no-print">
+    <button type="button" class="btn btn-primary" data-print><i class="bi bi-printer me-1"></i>طباعة</button>
+    <a class="btn btn-outline-secondary" href="@Url.Action("Details", new { id = studentId })">رجوع لملف الطالب</a>
+</div>
+
+<div class="id-badge">
+    <div class="id-head">
+        <span class="id-logo">
+            @if (Model.LogoPath is not null)
+            {
+                <img src="@Model.LogoPath" alt="" />
+            }
+            else
+            {
+                <span>✝</span>
+            }
+        </span>
+        <span class="id-church">@Model.ChurchName</span>
+    </div>
+    <div class="id-body">
+        <div class="id-info">
+            <div class="id-name">@Model.StudentName</div>
+            <div class="id-line"><span>الكود</span> @Model.StudentCode</div>
+            <div class="id-line"><span>المرحلة</span> @Model.StageName</div>
+            @if (Model.GroupName is not null)
+            {
+                <div class="id-line"><span>المجموعة</span> @Model.GroupName</div>
+            }
+        </div>
+        <div class="id-qr"><img src="@Model.QrDataUri" alt="رمز QR" /></div>
+    </div>
+</div>

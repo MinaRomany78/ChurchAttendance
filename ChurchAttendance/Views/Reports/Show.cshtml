@@ -1,0 +1,176 @@
+@model ReportPageViewModel
+@inject IChurchInfoService ChurchInfoService
+@{
+    var def = Model.Definition;
+    var f = Model.Filter;
+    var res = Model.Result;
+    var church = await ChurchInfoService.GetAsync();
+    ViewData["Title"] = def.Title;
+    var queryString = Context.Request.QueryString.Value;
+    var exportUrl = Url.Action("Export", new { id = def.Key }) + queryString;
+}
+@functions {
+    static string Fmt(object? v, ReportColumnKind kind) => v switch
+    {
+        null => "—",
+        DateTime d when kind == ReportColumnKind.Date => d.ToString("yyyy/MM/dd"),
+        DateTime d => d.ToString("yyyy/MM/dd hh:mm tt"),
+        double p when kind == ReportColumnKind.Percent => p.ToString("0.#") + "%",
+        double x => x.ToString("N0"),
+        int n => n.ToString("N0"),
+        long n => n.ToString("N0"),
+        _ => v.ToString() ?? string.Empty
+    };
+}
+
+<style media="print">
+    @@page { size: A4 landscape; margin: 10mm; }
+</style>
+
+@* Shown only when printing / saving as PDF *@
+<div class="print-only report-print-head">
+    <div class="fw-bold">@church.Name</div>
+    <h1>@def.Title</h1>
+    @if (res is not null)
+    {
+        <div>@res.FiltersText</div>
+        <div class="small">تاريخ الإصدار: @res.GeneratedAtLocal.ToString("yyyy/MM/dd hh:mm tt")</div>
+    }
+</div>
+
+<section class="panel mb-3 no-print">
+    <form method="get" asp-action="Show" asp-route-id="@def.Key" class="row g-2 p-3 align-items-end">
+        <div class="col-6 col-lg-2">
+            <label class="form-label small text-muted mb-1" for="from">من تاريخ</label>
+            <input id="from" name="from" type="date" class="form-control" value="@(f.From?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-6 col-lg-2">
+            <label class="form-label small text-muted mb-1" for="to">إلى تاريخ</label>
+            <input id="to" name="to" type="date" class="form-control" value="@(f.To?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-6 col-lg-2">
+            <label class="form-label small text-muted mb-1" for="rStage">المرحلة</label>
+            <select id="rStage" name="stageId" class="form-select">
+                <option value="">الكل</option>
+                @foreach (var s in Model.Stages)
+                {
+                    <option value="@s.Id" selected="@(f.StageId == s.Id)">@s.Name</option>
+                }
+            </select>
+        </div>
+
+        @if (def.ShowGroup)
+        {
+            <div class="col-6 col-lg-2">
+                <label class="form-label small text-muted mb-1" for="rGroup">المجموعة</label>
+                <select id="rGroup" name="groupId" class="form-select" data-group-for="#rStage">
+                    <option value="">الكل</option>
+                    @foreach (var g in Model.Groups)
+                    {
+                        <option value="@g.Id" data-stage="@g.StageId" selected="@(f.GroupId == g.Id)">@g.Name</option>
+                    }
+                </select>
+            </div>
+        }
+
+        @if (def.ShowStudent)
+        {
+            <div class="col-6 col-lg-2">
+                <label class="form-label small text-muted mb-1" for="rStudent">الطالب (اسم أو كود)</label>
+                <input id="rStudent" name="student" class="form-control" value="@f.Student" />
+            </div>
+        }
+
+        @if (def.StatusMode != ReportStatusMode.None)
+        {
+            <div class="col-6 col-lg-2">
+                <label class="form-label small text-muted mb-1" for="rStatus">حالة الحضور</label>
+                <select id="rStatus" name="status" class="form-select">
+                    <option value="">الكل</option>
+                    @if (def.StatusMode == ReportStatusMode.AllStatuses)
+                    {
+                        <option value="@AttendanceStatus.Present" selected="@(f.Status == AttendanceStatus.Present)">حاضر</option>
+                        <option value="@AttendanceStatus.Late" selected="@(f.Status == AttendanceStatus.Late)">متأخر</option>
+                    }
+                    <option value="@AttendanceStatus.Absent" selected="@(f.Status == AttendanceStatus.Absent)">غائب</option>
+                    <option value="@AttendanceStatus.Excused" selected="@(f.Status == AttendanceStatus.Excused)">غائب بعذر</option>
+                </select>
+            </div>
+        }
+
+        <div class="col-12 col-lg-auto d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>عرض</button>
+            <a asp-action="Show" asp-route-id="@def.Key" asp-route-from="" class="btn btn-outline-secondary" title="مسح الفلاتر" aria-label="مسح الفلاتر"><i class="bi bi-x-lg"></i></a>
+        </div>
+    </form>
+</section>
+
+@if (Model.Error is not null)
+{
+    <div class="alert alert-danger no-print">@Model.Error</div>
+}
+
+@if (res is not null)
+{
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 no-print">
+        <div class="text-muted">@res.FiltersText</div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" data-print><i class="bi bi-printer me-1"></i>طباعة / حفظ PDF</button>
+            <a href="@exportUrl" class="btn btn-success"><i class="bi bi-file-earmark-excel me-1"></i>تصدير Excel</a>
+        </div>
+    </div>
+
+    @if (res.Summary.Count > 0)
+    {
+        <div class="row g-3 mb-3 report-summary">
+            @foreach (var item in res.Summary)
+            {
+                <div class="col-6 col-md-4 col-xl-2">
+                    <div class="mini-stat"><span class="mini-value">@item.Value</span><span class="mini-label">@item.Label</span></div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (res.Truncated)
+    {
+        <div class="alert alert-warning">تم عرض أول @res.MaxRows.ToString("N0") سجل فقط. استخدم «تصدير Excel» للحصول على كامل البيانات، أو ضيّق الفترة.</div>
+    }
+
+    <section class="panel">
+        @if (res.Rows.Count == 0)
+        {
+            <div class="empty-state"><i class="bi bi-inbox"></i><p class="text-muted mb-0">لا توجد بيانات ضمن الفلاتر المحددة.</p></div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0 report-table">
+                    <thead>
+                    <tr>
+                        @foreach (var c in res.Columns)
+                        {
+                            <th>@c.Header</th>
+                        }
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var row in res.Rows)
+                    {
+                        <tr>
+                            @for (var i = 0; i < res.Columns.Count; i++)
+                            {
+                                <td>@Fmt(row[i], res.Columns[i].Kind)</td>
+                            }
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}
+
+@section Scripts {
+    <script src="~/js/stage-group.js" asp-append-version="true"></script>
+}

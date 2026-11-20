@@ -1,0 +1,165 @@
+@model SessionDetailsViewModel
+@{
+    ViewData["Title"] = "جلسة حضور";
+    var registeredCount = Model.PresentCount + Model.LateCount;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+    <div>
+        <h2 class="h4 fw-bold mb-1">@(Model.Title ?? ArabicText.SessionTypeText(Model.Type))</h2>
+        <div class="text-muted">
+            <i class="bi bi-calendar3 me-1"></i>@Model.Date.ToString("dddd d MMMM yyyy")
+            <span class="mx-1">•</span>@Model.StartTime.ToString("hh:mm tt")
+            <span class="mx-1">•</span>@(Model.StageName ?? "كل المراحل")@(Model.GroupName is null ? "" : " / " + Model.GroupName)
+            <span class="badge-soft ms-2 @(Model.IsClosed ? "badge-soft-info" : "badge-soft-success")">@(Model.IsClosed ? "مغلقة" : "مفتوحة")</span>
+        </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary">كل الجلسات</a>
+        <a asp-action="Session" asp-route-id="@Model.Id" class="btn btn-outline-secondary"><i class="bi bi-arrow-clockwise me-1"></i>تحديث</a>
+        @if (Model.CanRegister && !Model.IsClosed)
+        {
+            <form asp-action="Close" asp-route-id="@Model.Id" method="post"
+                  data-confirm="سيتم إغلاق الجلسة وتسجيل غياب كل طالب لم يحضر (@Model.NotRegisteredCount طالب). هل تريد المتابعة؟">
+                <button type="submit" class="btn btn-danger"><i class="bi bi-lock me-1"></i>إغلاق الجلسة</button>
+            </form>
+        }
+        @if (Model.CanCorrect && Model.IsClosed)
+        {
+            <form asp-action="Reopen" asp-route-id="@Model.Id" method="post" data-confirm="إعادة فتح هذه الجلسة؟">
+                <button type="submit" class="btn btn-outline-primary"><i class="bi bi-unlock me-1"></i>إعادة فتح</button>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md"><div class="mini-stat"><span class="mini-value text-success" id="registeredCount">@registeredCount</span><span class="mini-label">حاضر (شامل المتأخر)</span></div></div>
+    <div class="col-6 col-md"><div class="mini-stat"><span class="mini-value text-gold">@Model.LateCount</span><span class="mini-label">متأخر</span></div></div>
+    <div class="col-6 col-md"><div class="mini-stat"><span class="mini-value text-danger">@Model.AbsentCount</span><span class="mini-label">غائب</span></div></div>
+    <div class="col-6 col-md"><div class="mini-stat"><span class="mini-value">@Model.ExcusedCount</span><span class="mini-label">غائب بعذر</span></div></div>
+    <div class="col-12 col-md"><div class="mini-stat"><span class="mini-value">@Model.NotRegisteredCount</span><span class="mini-label">لم يُسجَّلوا بعد</span></div></div>
+</div>
+
+@if (Model.CanRegister && !Model.IsClosed)
+{
+    <section class="panel mb-4" id="scanApp"
+             data-session-id="@Model.Id"
+             data-register-url="@Url.Action("Register")"
+             data-search-url="@Url.Action("SearchStudents")">
+        @Html.AntiForgeryToken()
+
+        <div class="panel-head">
+            <ul class="nav nav-pills gap-1" role="tablist">
+                <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#tabCode" type="button" role="tab"><i class="bi bi-upc-scan me-1"></i>قارئ باركود / كود</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabCamera" type="button" role="tab"><i class="bi bi-camera me-1"></i>كاميرا QR</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#tabManual" type="button" role="tab"><i class="bi bi-search me-1"></i>بحث يدوي</button></li>
+            </ul>
+        </div>
+
+        <div class="p-3">
+            <div id="scanResult" class="alert d-none mb-3" role="status" aria-live="polite"></div>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="tabCode" role="tabpanel">
+                    <form id="codeForm" class="row g-2 align-items-end" autocomplete="off">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small text-muted mb-1" for="codeInput">امسح الباركود أو اكتب كود الطالب ثم اضغط Enter</label>
+                            <input id="codeInput" class="form-control form-control-lg" dir="ltr" autocomplete="off" autocapitalize="off" spellcheck="false" />
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small text-muted mb-1" for="codeMethod">طريقة الإدخال</label>
+                            <select id="codeMethod" class="form-select form-select-lg">
+                                <option value="2">قارئ باركود</option>
+                                <option value="3">كود الطالب</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3"><button type="submit" class="btn btn-primary btn-lg w-100">تسجيل</button></div>
+                    </form>
+                </div>
+
+                <div class="tab-pane fade" id="tabCamera" role="tabpanel">
+                    <div class="camera-box">
+                        <video id="cameraVideo" playsinline muted></video>
+                        <div class="camera-hint" id="cameraHint">اضغط تشغيل الكاميرا ووجّه الرمز نحوها</div>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="button" class="btn btn-primary" id="cameraStart"><i class="bi bi-camera-video me-1"></i>تشغيل الكاميرا</button>
+                        <button type="button" class="btn btn-outline-secondary" id="cameraStop" disabled>إيقاف</button>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0">الكاميرا تعمل على اتصال HTTPS فقط (أو localhost). إن لم تعمل استخدم قارئ الباركود أو البحث اليدوي.</p>
+                </div>
+
+                <div class="tab-pane fade" id="tabManual" role="tabpanel">
+                    <label class="form-label small text-muted mb-1" for="manualSearch">ابحث بالاسم أو الكود</label>
+                    <input id="manualSearch" class="form-control form-control-lg" autocomplete="off" />
+                    <div id="manualResults" class="list-group mt-2"></div>
+                </div>
+            </div>
+
+            <div id="recentScans" class="recent-scans mt-3"></div>
+        </div>
+    </section>
+}
+
+<section class="panel">
+    <div class="panel-head"><h3 class="panel-title">سجل الحضور</h3></div>
+
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="empty-state compact"><i class="bi bi-clipboard-check"></i><p class="text-muted mb-0">لا توجد تسجيلات في هذه الجلسة بعد.</p></div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>الطالب</th><th>الكود</th><th>المرحلة</th><th>الحالة</th><th>الوقت</th><th>طريقة التسجيل</th>
+                    @if (Model.CanCorrect) { <th>تعديل</th> }
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var row in Model.Rows)
+                {
+                    <tr>
+                        <td class="fw-semibold"><a asp-controller="Students" asp-action="Details" asp-route-id="@row.StudentId" class="text-decoration-none">@row.StudentName</a></td>
+                        <td>@row.StudentCode</td>
+                        <td>@row.StageName</td>
+                        <td><span class="badge-soft @ArabicText.StatusBadge(row.Status)">@ArabicText.Status(row.Status)</span></td>
+                        <td>@(row.LocalCheckIn?.ToString("hh:mm tt") ?? "—")</td>
+                        <td>@ArabicText.Method(row.Method)</td>
+                        @if (Model.CanCorrect)
+                        {
+                            <td>
+                                <form asp-action="Correct" method="post" class="d-flex gap-1" data-confirm="تعديل حالة حضور @row.StudentName؟">
+                                    <input type="hidden" name="sessionId" value="@Model.Id" />
+                                    <input type="hidden" name="recordId" value="@row.RecordId" />
+                                    <select name="status" class="form-select form-select-sm w-auto" aria-label="الحالة">
+                                        <option value="@((int)AttendanceStatus.Present)" selected="@(row.Status == AttendanceStatus.Present)">حاضر</option>
+                                        <option value="@((int)AttendanceStatus.Late)" selected="@(row.Status == AttendanceStatus.Late)">متأخر</option>
+                                        <option value="@((int)AttendanceStatus.Absent)" selected="@(row.Status == AttendanceStatus.Absent)">غائب</option>
+                                        @if (Model.AllowExcused || row.Status == AttendanceStatus.Excused)
+                                        {
+                                            <option value="@((int)AttendanceStatus.Excused)" selected="@(row.Status == AttendanceStatus.Excused)">غائب بعذر</option>
+                                        }
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">حفظ</button>
+                                </form>
+                            </td>
+                        }
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@section Scripts {
+    @if (Model.CanRegister && !Model.IsClosed)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+        <script src="~/js/attendance-scan.js" asp-append-version="true"></script>
+    }
+}

@@ -1,0 +1,220 @@
+@model LoginViewModel
+@inject IChurchInfoService ChurchInfoService
+
+@{
+    ViewData["Title"] = "تسجيل الدخول";
+    Layout = "_AuthLayout";
+
+    var church = await ChurchInfoService.GetAsync();
+}
+
+<div class="auth-page-wrapper">
+
+    <div class="auth-login-content">
+
+        <!-- اللوجو / الصليب -->
+        <div class="auth-church-brand">
+
+            @if (!string.IsNullOrWhiteSpace(church.LogoPath))
+            {
+                <div class="auth-church-logo">
+                    <img src="@church.LogoPath"
+                         alt="@church.Name" />
+                </div>
+            }
+            else
+            {
+                <div class="auth-church-cross">
+                    <span>✝</span>
+                </div>
+            }
+
+            <h1 class="auth-brand-title">
+                برنامج الحضور والمكافآت
+            </h1>
+
+            <p class="auth-brand-name">
+                @church.Name
+            </p>
+
+        </div>
+
+
+        <!-- Login Card -->
+        <div class="auth-card-container">
+
+            <!-- أيقونة المستخدم -->
+            <div class="auth-avatar-wrapper">
+                <div class="auth-avatar-circle">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+            </div>
+
+
+            <form asp-action="Login"
+                  method="post"
+                  class="auth-login-form">
+
+                <div asp-validation-summary="ModelOnly"
+                     class="alert alert-danger py-2 small mb-3"
+                     role="alert">
+                </div>
+
+                <input asp-for="ReturnUrl"
+                       type="hidden" />
+
+
+                <!-- Username -->
+                <div class="auth-form-group">
+
+                    <div class="auth-input-box">
+
+                        <input asp-for="UserNameOrEmail"
+                               class="form-control auth-input-field"
+                               placeholder="اسم المستخدم"
+                               autocomplete="username"
+                               autofocus />
+
+                        <i class="bi bi-person auth-input-icon"></i>
+
+                    </div>
+
+                    <span asp-validation-for="UserNameOrEmail"
+                          class="text-danger small d-block mt-1">
+                    </span>
+
+                </div>
+
+
+                <div class="auth-form-group">
+
+                    <div class="auth-input-box">
+
+                        <input asp-for="Password"
+                               type="password"
+                               class="form-control auth-input-field"
+                               id="passwordInput"
+                               placeholder="كلمة المرور"
+                               autocomplete="current-password" />
+
+                        <i class="bi bi-lock auth-input-icon"></i>
+
+                        <button type="button"
+                                class="auth-password-toggle"
+                                id="togglePassword"
+                                aria-label="إظهار كلمة المرور">
+
+                            <i class="bi bi-eye"></i>
+
+                        </button>
+
+                    </div>
+
+                    <span asp-validation-for="Password"
+                          class="text-danger small d-block mt-1">
+                    </span>
+
+                </div>
+
+                <!-- Remember Me -->
+                <div class="auth-remember-row">
+
+                    <div class="form-check">
+
+                        <input asp-for="RememberMe"
+                               class="form-check-input"
+                               id="rememberMe" />
+
+                        <label class="form-check-label"
+                               for="rememberMe">
+
+                            تذكرني
+
+                        </label>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Login Button -->
+                <button type="submit"
+                        class="auth-btn-submit">
+
+                    دخول
+
+                </button>
+
+
+                <!-- Forgot Password -->
+
+               
+            </form>
+
+        </div>
+
+
+        <!-- Verse -->
+        <div class="auth-verse-text">
+
+            <p>
+                "ليكن كل شيء بترتيب ونظام"
+            </p>
+
+            <small>
+                1 كورنثوس 14:40
+            </small>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+@section Scripts {
+
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+
+            const passwordInput = document.getElementById("passwordInput");
+            const togglePassword = document.getElementById("togglePassword");
+
+            if (!passwordInput || !togglePassword) {
+                return;
+            }
+
+            togglePassword.addEventListener("click", function() {
+
+                const isPassword = passwordInput.type === "password";
+
+                passwordInput.type = isPassword ? "text" : "password";
+
+                const icon = togglePassword.querySelector("i");
+
+                if (isPassword) {
+                    icon.classList.remove("bi-eye");
+                    icon.classList.add("bi-eye-slash");
+
+                    togglePassword.setAttribute(
+                        "aria-label",
+                        "إخفاء كلمة المرور"
+                    );
+                }
+                else {
+                    icon.classList.remove("bi-eye-slash");
+                    icon.classList.add("bi-eye");
+
+                    togglePassword.setAttribute(
+                        "aria-label",
+                        "إظهار كلمة المرور"
+                    );
+                }
+
+            });
+
+        });
+    </script>
+}

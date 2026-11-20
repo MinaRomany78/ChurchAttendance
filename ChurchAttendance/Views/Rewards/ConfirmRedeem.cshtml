@@ -1,0 +1,28 @@
+@model RedeemPreviewViewModel
+@{
+    ViewData["Title"] = "تأكيد الاستبدال";
+}
+
+<section class="panel form-panel">
+    <h2 class="h5 fw-bold mb-3">راجع البيانات قبل التأكيد</h2>
+
+    <dl class="detail-list px-0">
+        <dt>الطالب</dt><dd>@Model.StudentName (@Model.StudentCode)</dd>
+        <dt>المكافأة</dt><dd>@Model.RewardName</dd>
+        <dt>رصيد الطالب الحالي</dt><dd>@Model.Balance.ToString("N0") نقطة</dd>
+        <dt>النقاط التي ستُخصم</dt><dd class="text-danger fw-bold">@Model.RequiredPoints.ToString("N0") نقطة</dd>
+        <dt>الرصيد بعد الاستبدال</dt><dd class="fw-bold">@Model.BalanceAfter.ToString("N0") نقطة</dd>
+        @if (Model.Notes is not null)
+        {
+            <dt>ملاحظات</dt><dd>@Model.Notes</dd>
+        }
+    </dl>
+
+    <form asp-action="Execute" method="post" class="d-flex gap-2 mt-4">
+        <input type="hidden" name="studentId" value="@Model.StudentId" />
+        <input type="hidden" name="rewardId" value="@Model.RewardId" />
+        <input type="hidden" name="notes" value="@Model.Notes" />
+        <button type="submit" class="btn btn-primary px-4">تأكيد الاستبدال وخصم النقاط</button>
+        <a asp-action="Redeem" asp-route-studentId="@Model.StudentId" asp-route-rewardId="@Model.RewardId" class="btn btn-outline-secondary">رجوع</a>
+    </form>
+</section>

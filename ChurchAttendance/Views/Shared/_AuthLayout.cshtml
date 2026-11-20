@@ -1,0 +1,19 @@
+@inject IChurchInfoService ChurchInfoService
+@{
+    var church = await ChurchInfoService.GetAsync();
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <partial name="_Head" />
+    <title>@ViewData["Title"] - @church.Name</title>
+</head>
+<body class="auth-body">
+    <main class="auth-wrap">
+        @RenderBody()
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
